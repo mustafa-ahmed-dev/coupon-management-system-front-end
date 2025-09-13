@@ -1,0 +1,130 @@
+"use client";
+
+import { ReactNode, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Spin } from "antd";
+import { useAuth } from "@/hooks/useAuth";
+import type { UserRole } from "@/types/entities";
+
+interface ProtectedRouteProps {
+  children: ReactNode;
+  requiredRole?: UserRole;
+  fallback?: ReactNode;
+}
+
+export function ProtectedRoute({
+  children,
+  requiredRole,
+  fallback,
+}: ProtectedRouteProps) {
+  const { isAuthenticated, isLoading, user, hasRole } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      // Not authenticated, redirect to login
+      router.push("/login");
+    }
+  }, [isAuthenticated, isLoading, router]);
+
+  // Still loading authentication state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Spin size="large" tip="Loading..." />
+      </div>
+    );
+  }
+
+  // Not authenticated
+  if (!isAuthenticated || !user) {
+    return (
+      fallback || (
+        <div className="flex items-center justify-center min-h-screen">
+          <Spin size="large" tip="Redirecting to login..." />
+        </div>
+      )
+    );
+  }
+
+  // Check if user is active (not deactivated)
+  if (user.deactivatedAt) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-red-600 mb-2">
+            Account Deactivated
+          </h2>
+          <p className="text-gray-600">
+            Your account has been deactivated. Please contact an administrator.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Check role permissions if required
+  if (requiredRole && !hasRole(requiredRole)) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-red-600 mb-2">
+            Access Denied
+          </h2>
+          <p className="text-gray-600">
+            You don&apos;t have permission to access this page.
+          </p>
+          <p className="text-sm text-gray-500 mt-2">
+            Required role: {requiredRole} | Your role: {user.role}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // All checks passed, render children
+  return <>{children}</>;
+}
+
+// Specific role-based route guards
+export function AdminRoute({
+  children,
+  fallback,
+}: {
+  children: ReactNode;
+  fallback?: ReactNode;
+}) {
+  return (
+    <ProtectedRoute requiredRole="admin" fallback={fallback}>
+      {children}
+    </ProtectedRoute>
+  );
+}
+
+export function ManagerRoute({
+  children,
+  fallback,
+}: {
+  children: ReactNode;
+  fallback?: ReactNode;
+}) {
+  return (
+    <ProtectedRoute requiredRole="manager" fallback={fallback}>
+      {children}
+    </ProtectedRoute>
+  );
+}
+
+export function UserRoute({
+  children,
+  fallback,
+}: {
+  children: ReactNode;
+  fallback?: ReactNode;
+}) {
+  return (
+    <ProtectedRoute requiredRole="user" fallback={fallback}>
+      {children}
+    </ProtectedRoute>
+  );
+}
