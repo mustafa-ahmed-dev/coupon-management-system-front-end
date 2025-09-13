@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Card, Form, Input, Button, Typography, Divider } from "antd";
+import { Card, Form, Input, Button, Typography, Divider, Spin } from "antd";
 import { UserOutlined, LockOutlined } from "@ant-design/icons";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -21,7 +21,7 @@ export default function LoginPage() {
     control,
     handleSubmit,
     formState: { errors },
-  } = useForm<LoginFormData>({
+  } = useForm({
     resolver: yupResolver(loginSchema),
     defaultValues: {
       email: "",
@@ -52,12 +52,16 @@ export default function LoginPage() {
   // Show loading while checking auth state
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <Text>Loading...</Text>
-        </div>
-      </div>
+      <main
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "100vh",
+        }}
+      >
+        <Spin size="large" />
+      </main>
     );
   }
 
@@ -67,97 +71,100 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div className="text-center">
-          <Title level={2} className="text-gray-900">
-            Coupon Management System
-          </Title>
-          <Text className="text-gray-600">Sign in to your account</Text>
+    <main
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        minHeight: "100vh",
+        background: "#f0f2f5", // Optional: Adds a nice background color
+        padding: "16px", // Optional: Adds some padding for small screens
+      }}
+    >
+      <Card style={{ maxWidth: 400, width: "100%" }}>
+        <div style={{ textAlign: "center", marginBottom: "24px" }}>
+          <Title level={3}>Sign in to your account</Title>
         </div>
 
-        <Card className="shadow-lg">
-          <Form
-            layout="vertical"
-            onFinish={handleSubmit(onSubmit)}
-            autoComplete="off"
+        <Form layout="vertical" onFinish={handleSubmit(onSubmit)}>
+          <Form.Item
+            label="Email"
+            validateStatus={errors.email ? "error" : ""}
+            help={errors.email?.message}
           >
-            <Form.Item
-              label="Email Address"
-              validateStatus={errors.email ? "error" : ""}
-              help={errors.email?.message}
+            <Controller
+              name="email"
+              control={control}
+              render={({ field }) => (
+                <Input
+                  {...field}
+                  prefix={<UserOutlined />}
+                  placeholder="Enter your email"
+                  size="large"
+                  autoComplete="email"
+                />
+              )}
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="Password"
+            validateStatus={errors.password ? "error" : ""}
+            help={errors.password?.message}
+          >
+            <Controller
+              name="password"
+              control={control}
+              render={({ field }) => (
+                <Input.Password
+                  {...field}
+                  prefix={<LockOutlined />}
+                  placeholder="Enter your password"
+                  size="large"
+                  autoComplete="current-password"
+                />
+              )}
+            />
+          </Form.Item>
+
+          <Form.Item>
+            <Button
+              type="primary"
+              htmlType="submit"
+              block
+              size="large"
+              loading={isSubmitting}
             >
-              <Controller
-                name="email"
-                control={control}
-                render={({ field }) => (
-                  <Input
-                    {...field}
-                    prefix={<UserOutlined className="text-gray-400" />}
-                    placeholder="Enter your email"
-                    size="large"
-                    autoComplete="email"
-                  />
-                )}
-              />
-            </Form.Item>
+              {isSubmitting ? "Signing in..." : "Sign in"}
+            </Button>
+          </Form.Item>
+        </Form>
 
-            <Form.Item
-              label="Password"
-              validateStatus={errors.password ? "error" : ""}
-              help={errors.password?.message}
-            >
-              <Controller
-                name="password"
-                control={control}
-                render={({ field }) => (
-                  <Input.Password
-                    {...field}
-                    prefix={<LockOutlined className="text-gray-400" />}
-                    placeholder="Enter your password"
-                    size="large"
-                    autoComplete="current-password"
-                  />
-                )}
-              />
-            </Form.Item>
+        <Divider />
 
-            <Form.Item className="mb-0">
-              <Button
-                type="primary"
-                htmlType="submit"
-                loading={isSubmitting}
-                size="large"
-                block
-                className="font-medium"
-              >
-                {isSubmitting ? "Signing in..." : "Sign in"}
-              </Button>
-            </Form.Item>
-          </Form>
-
-          <Divider />
-
-          <div className="text-center text-sm text-gray-600">
-            <Text>For support, contact your system administrator</Text>
-          </div>
-        </Card>
+        <div style={{ textAlign: "center" }}>
+          <Text type="secondary">
+            For support, contact your system administrator
+          </Text>
+        </div>
 
         {/* Development helper - remove in production */}
         {process.env.NODE_ENV === "development" && (
-          <Card className="bg-blue-50 border-blue-200">
-            <Title level={5} className="text-blue-800 mb-2">
-              Development Info
-            </Title>
-            <div className="text-sm text-blue-700 space-y-1">
-              <div>
-                API Base URL: {process.env.NEXT_PUBLIC_API_BASE_URL || "/api"}
-              </div>
-              <div>Login endpoint: /api/auth/login</div>
-            </div>
-          </Card>
+          <div style={{ marginTop: "24px", opacity: 0.7 }}>
+            <Divider>
+              <Text type="secondary" style={{ fontSize: "12px" }}>
+                Dev Info
+              </Text>
+            </Divider>
+            <Text code style={{ display: "block", fontSize: "12px" }}>
+              API Base URL: {process.env.NEXT_PUBLIC_API_BASE_URL || "/api"}
+            </Text>
+            <Text code style={{ display: "block", fontSize: "12px" }}>
+              Login endpoint: /auth/login
+            </Text>
+          </div>
         )}
-      </div>
-    </div>
+      </Card>
+    </main>
   );
 }

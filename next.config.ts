@@ -62,6 +62,16 @@ const nextConfig: NextConfig = {
   // Disable x-powered-by header for security
   poweredByHeader: false,
 
+  // API Proxy configuration - strips /api prefix when forwarding
+  async rewrites() {
+    return [
+      {
+        source: "/api/:path*",
+        destination: `${process.env.NEXT_PUBLIC_API_BASE_URL}/:path*`,
+      },
+    ];
+  },
+
   // Headers for security and CORS (if needed)
   async headers() {
     return [

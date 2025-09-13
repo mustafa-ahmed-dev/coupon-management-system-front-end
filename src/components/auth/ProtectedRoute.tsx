@@ -2,9 +2,11 @@
 
 import { ReactNode, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Spin } from "antd";
+import { Spin, Typography } from "antd";
 import { useAuth } from "@/hooks/useAuth";
 import type { UserRole } from "@/types/entities";
+
+const { Text } = Typography;
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -17,12 +19,18 @@ export function ProtectedRoute({
   requiredRole,
   fallback,
 }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading, user, hasRole } = useAuth();
+  const { isAuthenticated, isLoading, user, hasRole, logout } = useAuth();
   const router = useRouter();
+
+  // Debug logs
+  console.log("ProtectedRoute - isLoading:", isLoading);
+  console.log("ProtectedRoute - isAuthenticated:", isAuthenticated);
+  console.log("ProtectedRoute - user:", user);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       // Not authenticated, redirect to login
+      console.log("Redirecting to login...");
       router.push("/login");
     }
   }, [isAuthenticated, isLoading, router]);
@@ -66,18 +74,25 @@ export function ProtectedRoute({
   // Check role permissions if required
   if (requiredRole && !hasRole(requiredRole)) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold text-red-600 mb-2">
-            Access Denied
-          </h2>
-          <p className="text-gray-600">
-            You don&apos;t have permission to access this page.
-          </p>
-          <p className="text-sm text-gray-500 mt-2">
-            Required role: {requiredRole} | Your role: {user.role}
-          </p>
-        </div>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: "100vh",
+          flexDirection: "column",
+          gap: 16,
+        }}
+      >
+        <Text strong style={{ fontSize: 18, color: "#ff4d4f" }}>
+          Access Denied
+        </Text>
+        <Text type="secondary">
+          You don&apos;t have permission to access this page.
+        </Text>
+        <Text type="secondary" style={{ fontSize: 12 }}>
+          Required role: {requiredRole} | Your role: {user.role}
+        </Text>
       </div>
     );
   }
