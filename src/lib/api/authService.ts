@@ -4,6 +4,7 @@ import {
   setCredentials,
   logout as logoutAction,
   setLoading,
+  updateUser,
 } from "@/store/slices/authSlice";
 import { showToast, toastMessages } from "@/lib/utils/toast";
 import { jwtDecode } from "jwt-decode";
@@ -239,5 +240,28 @@ export class AuthService {
     return (
       state.auth.isAuthenticated && !!state.auth.user && !!state.auth.token
     );
+  }
+
+  static updateUserProfile(updates: Partial<User>): void {
+    const state = store.getState();
+    const currentUser = state.auth.user;
+
+    if (!currentUser) {
+      throw new Error("No authenticated user to update");
+    }
+
+    // Update Redux store first
+    store.dispatch(updateUser(updates));
+
+    // Get the updated user from Redux (after the merge)
+    const newState = store.getState();
+    const updatedUser = newState.auth.user;
+
+    if (updatedUser) {
+      // Update localStorage with the complete merged user object
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(updatedUser));
+    }
+
+    showToast.success("Profile updated successfully");
   }
 }

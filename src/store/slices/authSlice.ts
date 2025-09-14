@@ -43,11 +43,6 @@ const authSlice = createSlice({
     updateUser: (state, action: PayloadAction<Partial<User>>) => {
       if (state.user) {
         state.user = { ...state.user, ...action.payload };
-        // Update localStorage as well
-        localStorage.setItem(
-          "coupon_management_user",
-          JSON.stringify(state.user)
-        );
       }
     },
   },

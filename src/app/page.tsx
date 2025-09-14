@@ -2,21 +2,21 @@
 
 import { Typography, Divider } from "antd";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
-import { AppLayout } from "@/components/layout/AppLayout";
+import { Layout } from "@/components/layout/Layout";
 
 const { Title, Text } = Typography;
 
 export default function HomePage() {
   return (
     <ProtectedRoute>
-      <AppLayout>
+      <Layout>
         <Title level={2}>Dashboard</Title>
         <Divider />
         <Text type="secondary">
           Welcome to the Coupon Management System dashboard. Use the sidebar to
           navigate to different sections.
         </Text>
-      </AppLayout>
+      </Layout>
     </ProtectedRoute>
   );
 }

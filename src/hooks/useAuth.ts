@@ -13,10 +13,14 @@ export const useAuth = () => {
   // Two-step login function
   const login = useCallback(
     async (email: string, password: string): Promise<User> => {
-      // AuthService.login handles the two-step flow internally
-      return await AuthService.login(email, password);
+      dispatch(setLoading(true));
+      try {
+        return await AuthService.login(email, password);
+      } finally {
+        dispatch(setLoading(false));
+      }
     },
-    []
+    [dispatch]
   );
 
   // Logout function
@@ -26,8 +30,13 @@ export const useAuth = () => {
 
   // Refresh user data from server
   const refreshUser = useCallback(async (): Promise<User> => {
-    return await AuthService.refreshUser();
-  }, []);
+    dispatch(setLoading(true));
+    try {
+      return await AuthService.refreshUser();
+    } finally {
+      dispatch(setLoading(false));
+    }
+  }, [dispatch]);
 
   // Check if user has required role
   const hasRole = useCallback(
