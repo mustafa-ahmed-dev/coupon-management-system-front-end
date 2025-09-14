@@ -20,7 +20,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <ScreenWidthGuard minWidth={900}>
+        <ScreenWidthGuard minWidth={950}>
           <Providers>{children}</Providers>
         </ScreenWidthGuard>
       </body>

@@ -8,19 +8,14 @@ const { Content: LayoutContent } = Layout;
 interface ContentProps {
   children: React.ReactNode;
   showBreadcrumb?: boolean;
-  isMobile?: boolean;
 }
 
-export function Content({
-  children,
-  showBreadcrumb = true,
-  isMobile = false,
-}: ContentProps) {
+export function Content({ children, showBreadcrumb = true }: ContentProps) {
   return (
     <LayoutContent
       style={{
         margin: 24,
-        padding: isMobile ? 16 : 24,
+        padding: 24,
         background: "#fff",
         borderRadius: 8,
         minHeight: "calc(100vh - 112px)",

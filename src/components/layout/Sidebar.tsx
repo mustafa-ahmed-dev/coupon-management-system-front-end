@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { Layout, Menu, Space, Typography, Drawer } from "antd";
+import { Layout, Menu, Space, Typography } from "antd";
 import {
   DashboardOutlined,
   UsergroupAddOutlined,
@@ -19,18 +19,12 @@ const { Text } = Typography;
 
 interface SidebarProps {
   collapsed: boolean;
-  isMobile?: boolean;
-  onBreakpoint?: (broken: boolean) => void;
 }
 
-export function Sidebar({
-  collapsed,
-  isMobile = false,
-  onBreakpoint,
-}: SidebarProps) {
+export function Sidebar({ collapsed }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, hasRole } = useAuth();
+  const { hasRole } = useAuth();
   const [selectedKeys, setSelectedKeys] = useState<string[]>(["dashboard"]);
 
   // Update selected menu item based on current route
@@ -166,30 +160,6 @@ export function Sidebar({
     />
   );
 
-  // Mobile version using Drawer
-  if (isMobile) {
-    return (
-      <Drawer
-        title={
-          <Space>
-            <Text strong style={{ color: "#1890ff" }}>
-              Coupon Management System
-            </Text>
-          </Space>
-        }
-        placement="left"
-        open={!collapsed}
-        onClose={() => onBreakpoint?.(true)}
-        width={240}
-        styles={{
-          body: { padding: 0 },
-        }}
-      >
-        <NavigationMenu />
-      </Drawer>
-    );
-  }
-
   // Desktop version using Sider
   return (
     <Sider
@@ -199,8 +169,7 @@ export function Sidebar({
       theme="light"
       width={240}
       breakpoint="lg"
-      collapsedWidth={isMobile ? 0 : 80}
-      onBreakpoint={onBreakpoint}
+      collapsedWidth={80}
       style={{
         boxShadow: "2px 0 8px 0 rgba(29,35,41,.05)",
       }}

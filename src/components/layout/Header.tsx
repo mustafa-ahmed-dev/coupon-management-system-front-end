@@ -9,6 +9,7 @@ import {
   Badge,
   Avatar,
   Dropdown,
+  Image,
 } from "antd";
 import {
   MenuFoldOutlined,
@@ -17,7 +18,6 @@ import {
   LogoutOutlined,
   SettingOutlined,
   ProfileOutlined,
-  BellOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
@@ -29,14 +29,9 @@ const { Text } = Typography;
 interface HeaderProps {
   collapsed: boolean;
   onToggleCollapse: () => void;
-  isMobile?: boolean;
 }
 
-export function Header({
-  collapsed,
-  onToggleCollapse,
-  isMobile = false,
-}: HeaderProps) {
+export function Header({ collapsed, onToggleCollapse }: HeaderProps) {
   const { user, logout } = useAuth();
   const router = useRouter();
 
@@ -47,12 +42,6 @@ export function Header({
       icon: <ProfileOutlined />,
       label: "My Profile",
       onClick: () => router.push("/profile"),
-    },
-    {
-      key: "settings",
-      icon: <SettingOutlined />,
-      label: "Settings",
-      onClick: () => router.push("/settings"),
     },
     {
       type: "divider",
@@ -83,68 +72,6 @@ export function Header({
     }
   };
 
-  // Mobile header layout
-  if (isMobile) {
-    return (
-      <LayoutHeader
-        style={{
-          padding: 0,
-          background: "#fff",
-          borderBottom: "1px solid #f0f0f0",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 1001,
-        }}
-      >
-        {/* Left side - Menu trigger */}
-        <Space align="center">
-          <Button
-            type="text"
-            icon={<MenuUnfoldOutlined />}
-            onClick={onToggleCollapse}
-            style={{
-              fontSize: 16,
-              width: 64,
-              height: 64,
-            }}
-          />
-          <Text strong style={{ fontSize: 16, color: "#1890ff" }}>
-            CMS
-          </Text>
-        </Space>
-
-        {/* Right side - User info (compact) */}
-        <Space size="small" style={{ marginRight: 16 }}>
-          <Button
-            type="text"
-            icon={<BellOutlined />}
-            style={{ fontSize: 18 }}
-          />
-          <Dropdown
-            menu={{ items: userDropdownItems }}
-            trigger={["click"]}
-            placement="bottomRight"
-            arrow
-          >
-            <Button type="text" style={{ height: "auto", padding: "8px" }}>
-              <Avatar
-                size="small"
-                icon={<UserOutlined />}
-                style={{ backgroundColor: getRoleBadgeColor(user?.role) }}
-              />
-            </Button>
-          </Dropdown>
-        </Space>
-      </LayoutHeader>
-    );
-  }
-
   // Desktop header layout
   return (
     <LayoutHeader
@@ -159,39 +86,39 @@ export function Header({
       }}
     >
       {/* Left side - Collapse trigger */}
-      <Button
-        type="text"
-        icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-        onClick={onToggleCollapse}
-        style={{
-          fontSize: 16,
-          width: 64,
-          height: 64,
-        }}
-      />
+      <Space align="center">
+        <Button
+          type="text"
+          icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+          onClick={onToggleCollapse}
+          style={{
+            fontSize: 16,
+            width: 64,
+            height: 64,
+          }}
+        />
+        <Image
+          src="/elryan.svg"
+          alt="ElRyan Logo"
+          style={{
+            height: "4rem",
+            width: "auto",
+            cursor: "pointer",
+            marginLeft: 8,
+          }}
+          onClick={() => router.push("/")}
+        />
+      </Space>
 
       {/* Right side - User info and controls */}
       <Space size="middle" style={{ marginRight: 24 }}>
         {/* Welcome message */}
         <Space size="small">
-          <Text type="secondary">Welcome back,</Text>
-          <Text strong>{user?.name}</Text>
-          <Badge
-            count={user?.role?.toUpperCase()}
-            color={getRoleBadgeColor(user?.role)}
-            style={{ marginLeft: 8 }}
-          />
+          <Text type="secondary">Welcome back</Text>
+          {user?.name}
         </Space>
 
         <Divider type="vertical" style={{ height: 32 }} />
-
-        {/* Notifications */}
-        <Button
-          type="text"
-          icon={<BellOutlined />}
-          style={{ fontSize: 18 }}
-          onClick={() => router.push("/notifications")}
-        />
 
         {/* User dropdown */}
         <Dropdown
