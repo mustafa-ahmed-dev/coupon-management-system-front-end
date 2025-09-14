@@ -9,6 +9,7 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import { useAuth } from "@/hooks/useAuth";
 import { loginSchema } from "@/types/forms";
 import type { LoginFormData } from "@/types/forms";
+import { showToast } from "@/lib/utils/toast";
 
 const { Title, Text } = Typography;
 
@@ -44,6 +45,7 @@ export default function LoginPage() {
     } catch (error) {
       // Error is handled by AuthService (toast notification)
       console.error("Login error:", error);
+      showToast.error("Login Error");
     } finally {
       setIsSubmitting(false);
     }

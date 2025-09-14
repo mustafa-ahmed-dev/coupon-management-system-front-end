@@ -3,204 +3,237 @@ import { store } from "@/store";
 import {
   setCredentials,
   logout as logoutAction,
+  setLoading,
 } from "@/store/slices/authSlice";
 import { showToast, toastMessages } from "@/lib/utils/toast";
-import type { AuthResponse, LoginRequest } from "@/types/api";
+import { jwtDecode } from "jwt-decode";
 import type { User } from "@/types/entities";
-import { TOKEN_STORAGE_KEY, USER_STORAGE_KEY } from "@/types/auth";
+import {
+  TOKEN_STORAGE_KEY,
+  USER_STORAGE_KEY,
+  type JwtPayload,
+} from "@/types/auth";
 
 export class AuthService {
-  // Login user with email and password
+  // Two-step login: 1) Get token, 2) Fetch user data
   static async login(email: string, password: string): Promise<User> {
     try {
-      const loginData: LoginRequest = { email, password };
+      store.dispatch(setLoading(true));
 
-      const response = await apiClient.post<AuthResponse>(
+      // Step 1: Get access token from backend
+      const loginResponse = await apiClient.post<{ accessToken: string }>(
         "/auth/login",
-        loginData
+        {
+          email,
+          password,
+        }
       );
 
-      // Log the ENTIRE response to see the structure
-      console.log("=== FULL API RESPONSE ===");
-      console.log("response.data:", response.data);
-      console.log("response.status:", response.status);
-
-      // Check if response.data has user and token
-      if (!response.data) {
-        throw new Error("No data in response");
+      if (!loginResponse.data?.accessToken) {
+        throw new Error("No access token received from server");
       }
 
-      const { user, token } = response.data;
+      const { accessToken } = loginResponse.data;
 
-      console.log("=== EXTRACTED VALUES ===");
-      console.log("user:", user);
-      console.log("token:", token);
-
-      if (!user) {
-        throw new Error("No user in response data");
+      // Step 2: Extract user ID from JWT token
+      const userId = this.extractUserIdFromToken(accessToken);
+      if (!userId) {
+        throw new Error("Could not extract user ID from token");
       }
 
-      if (!token) {
-        throw new Error("No token in response data");
+      // Step 3: Fetch full user data using the token
+      const userResponse = await apiClient.get<User>(`/users/${userId}`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!userResponse.data) {
+        throw new Error("No user data received from server");
       }
 
-      // Store credentials in Redux and localStorage
-      console.log("=== STORING CREDENTIALS ===");
-      store.dispatch(setCredentials({ user, token }));
+      const user = userResponse.data;
 
-      const userString = JSON.stringify(user);
-      console.log("User string to save:", userString);
-
-      localStorage.setItem(TOKEN_STORAGE_KEY, token);
-      localStorage.setItem(USER_STORAGE_KEY, userString);
-
-      console.log("=== VERIFICATION ===");
-      console.log("Saved token:", localStorage.getItem(TOKEN_STORAGE_KEY));
-      console.log("Saved user string:", localStorage.getItem(USER_STORAGE_KEY));
-
-      // Verify Redux state
-      const state = store.getState();
-      console.log("Redux auth state:", state.auth);
+      // Step 4: Store everything in Redux and localStorage
+      store.dispatch(setCredentials({ user, token: accessToken }));
+      localStorage.setItem(TOKEN_STORAGE_KEY, accessToken);
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
 
       showToast.success(toastMessages.auth.loginSuccess);
-
       return user;
-    } catch (error) {
-      console.error("Login error details:", error);
-      showToast.error(toastMessages.auth.loginError);
+    } catch (error: any) {
+      // Clear any partial state on error
+      this.clearAuthState();
+
+      // Handle specific error messages
+      if (error.response?.status === 401) {
+        showToast.error("Invalid email or password");
+      } else if (error.message.includes("access token")) {
+        showToast.error("Authentication failed. Please try again.");
+      } else if (error.message.includes("user ID")) {
+        showToast.error("Invalid authentication token");
+      } else {
+        showToast.error("Login failed. Please try again.");
+      }
+
       throw error;
+    } finally {
+      store.dispatch(setLoading(false));
     }
   }
 
   // Logout user
   static logout(): void {
     try {
-      // Clear from Redux
-      store.dispatch(logoutAction());
-
-      // Clear from localStorage
-      localStorage.removeItem(TOKEN_STORAGE_KEY);
-      localStorage.removeItem(USER_STORAGE_KEY);
-
+      this.clearAuthState();
       showToast.success(toastMessages.auth.logoutSuccess);
     } catch (error) {
       console.error("Logout error:", error);
       // Still clear everything even if there's an error
-      store.dispatch(logoutAction());
-      localStorage.removeItem(TOKEN_STORAGE_KEY);
-      localStorage.removeItem(USER_STORAGE_KEY);
+      this.clearAuthState();
     }
   }
 
   // Initialize auth state from localStorage on app start
   static initializeAuth(): void {
     try {
-      console.log("Initializing auth...");
       const token = localStorage.getItem(TOKEN_STORAGE_KEY);
       const userStr = localStorage.getItem(USER_STORAGE_KEY);
 
-      console.log("Token from localStorage:", !!token);
-      console.log("User string from localStorage:", !!userStr);
-
       if (token && userStr) {
-        const user: User = JSON.parse(userStr);
-
-        console.log("Parsed user:", user);
-
-        // Check if user data is valid
-        if (user.id && user.email && user.role) {
-          console.log("Setting credentials in Redux...");
-          store.dispatch(setCredentials({ user, token }));
+        // Check if token is expired
+        if (this.isTokenExpired(token)) {
+          this.clearAuthState();
           return;
-        } else {
-          console.log("Invalid user data structure");
+        }
+
+        try {
+          const user: User = JSON.parse(userStr);
+
+          // Validate user data structure
+          if (this.isValidUser(user)) {
+            store.dispatch(setCredentials({ user, token }));
+          } else {
+            this.clearAuthState();
+          }
+        } catch (parseError) {
+          this.clearAuthState();
         }
       } else {
-        console.log("No token or user in localStorage");
+        this.clearAuthState();
       }
-
-      // If no valid auth data, ensure logged out state
-      console.log("Clearing auth state...");
-      store.dispatch(logoutAction());
-      localStorage.removeItem(TOKEN_STORAGE_KEY);
-      localStorage.removeItem(USER_STORAGE_KEY);
     } catch (error) {
-      console.error("Auth initialization error:", error);
-      // Clear everything on error
-      store.dispatch(logoutAction());
-      localStorage.removeItem(TOKEN_STORAGE_KEY);
-      localStorage.removeItem(USER_STORAGE_KEY);
+      this.clearAuthState();
     }
   }
 
-  // Get current user from API (refresh user data)
-  static async getCurrentUser(): Promise<User> {
+  // Refresh current user data from server
+  static async refreshUser(): Promise<User> {
     try {
       const state = store.getState();
       const currentUser = state.auth.user;
+      const token = state.auth.token;
 
-      if (!currentUser) {
-        throw new Error("No authenticated user");
+      if (!currentUser || !token) {
+        throw new Error("No authenticated user to refresh");
       }
 
-      const response = await apiClient.get<User>(`/users/${currentUser.id}`);
-      const user = response.data;
+      store.dispatch(setLoading(true));
+
+      const response = await apiClient.get<User>(`/users/${currentUser.id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const updatedUser = response.data;
 
       // Update user in store and localStorage
-      const token = state.auth.token;
-      if (token) {
-        store.dispatch(setCredentials({ user, token }));
-        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
-      }
+      store.dispatch(setCredentials({ user: updatedUser, token }));
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(updatedUser));
 
-      return user;
+      return updatedUser;
     } catch (error) {
-      // If user fetch fails, logout (token might be invalid)
+      // If refresh fails, might be due to invalid token
       this.logout();
       throw error;
+    } finally {
+      store.dispatch(setLoading(false));
     }
   }
 
-  // Check if user has required role
+  // Helper Methods
+  private static extractUserIdFromToken(token: string): number | null {
+    try {
+      const decoded = jwtDecode<JwtPayload>(token);
+      const userId =
+        typeof decoded.sub === "string"
+          ? parseInt(decoded.sub, 10)
+          : Number(decoded.sub);
+
+      return isNaN(userId) ? null : userId;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  private static isTokenExpired(token: string): boolean {
+    try {
+      const decoded = jwtDecode<JwtPayload>(token);
+      if (!decoded.exp) return true;
+
+      const currentTime = Date.now() / 1000;
+      return decoded.exp < currentTime;
+    } catch (error) {
+      return true;
+    }
+  }
+
+  private static isValidUser(user: any): user is User {
+    return (
+      user &&
+      typeof user.id === "number" &&
+      typeof user.email === "string" &&
+      typeof user.role === "string" &&
+      user.email.length > 0 &&
+      user.role.length > 0
+    );
+  }
+
+  private static clearAuthState(): void {
+    store.dispatch(logoutAction());
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
+    localStorage.removeItem(USER_STORAGE_KEY);
+  }
+
+  // Public utility methods
   static hasRole(requiredRole: "admin" | "manager" | "user"): boolean {
     const state = store.getState();
     const userRole = state.auth.user?.role;
 
     if (!userRole) return false;
 
-    // Role hierarchy: admin > manager > user
-    const roleHierarchy = {
-      admin: 3,
-      manager: 2,
-      user: 1,
-    };
-
-    return roleHierarchy[userRole] >= roleHierarchy[requiredRole];
+    const roleHierarchy = { admin: 3, manager: 2, user: 1 };
+    return (
+      roleHierarchy[userRole as keyof typeof roleHierarchy] >=
+      roleHierarchy[requiredRole]
+    );
   }
 
-  // Check if user is active (not deactivated)
   static isUserActive(): boolean {
     const state = store.getState();
     const user = state.auth.user;
-
-    if (!user) return false;
-
-    return !user.deactivatedAt;
+    return user ? !user.deactivatedAt : false;
   }
 
-  // Get current user from state
-  static getCurrentUserFromState(): User | null {
-    const state = store.getState();
-    return state.auth.user;
+  static getCurrentUser(): User | null {
+    return store.getState().auth.user;
   }
 
-  // Get current token from state
   static getCurrentToken(): string | null {
-    const state = store.getState();
-    return state.auth.token;
+    return store.getState().auth.token;
   }
 
-  // Check if user is authenticated
   static isAuthenticated(): boolean {
     const state = store.getState();
     return (

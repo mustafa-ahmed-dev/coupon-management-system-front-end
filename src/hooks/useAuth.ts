@@ -4,25 +4,19 @@ import { setLoading } from "@/store/slices/authSlice";
 import { AuthService } from "@/lib/api/authService";
 import type { User } from "@/types/entities";
 
-// Custom hook for authentication
 export const useAuth = () => {
   const dispatch = useAppDispatch();
   const { user, token, isAuthenticated, isLoading } = useAppSelector(
     (state) => state.auth
   );
 
-  // Login function
+  // Two-step login function
   const login = useCallback(
     async (email: string, password: string): Promise<User> => {
-      dispatch(setLoading(true));
-      try {
-        const user = await AuthService.login(email, password);
-        return user;
-      } finally {
-        dispatch(setLoading(false));
-      }
+      // AuthService.login handles the two-step flow internally
+      return await AuthService.login(email, password);
     },
-    [dispatch]
+    []
   );
 
   // Logout function
@@ -30,16 +24,10 @@ export const useAuth = () => {
     AuthService.logout();
   }, []);
 
-  // Refresh user data
+  // Refresh user data from server
   const refreshUser = useCallback(async (): Promise<User> => {
-    dispatch(setLoading(true));
-    try {
-      const user = await AuthService.getCurrentUser();
-      return user;
-    } finally {
-      dispatch(setLoading(false));
-    }
-  }, [dispatch]);
+    return await AuthService.refreshUser();
+  }, []);
 
   // Check if user has required role
   const hasRole = useCallback(
@@ -72,24 +60,19 @@ export const useAuth = () => {
   };
 };
 
-// Hook for checking specific roles
+// Convenience hooks
 export const useRole = (requiredRole: "admin" | "manager" | "user") => {
   const { hasRole } = useAuth();
   return hasRole(requiredRole);
 };
 
-// Hook for admin access
-export const useIsAdmin = () => {
-  return useRole("admin");
-};
+export const useIsAdmin = () => useRole("admin");
 
-// Hook for manager access (admin + manager)
 export const useIsManager = () => {
   const { user } = useAuth();
   return user?.role === "admin" || user?.role === "manager";
 };
 
-// Hook for checking if current user
 export const useIsCurrentUser = (userId: number) => {
   const { user } = useAuth();
   return user?.id === userId;

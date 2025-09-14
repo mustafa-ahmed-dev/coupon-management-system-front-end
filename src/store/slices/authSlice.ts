@@ -1,6 +1,4 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-
-// Import the User type from entities
 import type { User } from "@/types/entities";
 
 interface AuthState {
@@ -14,7 +12,7 @@ const initialState: AuthState = {
   user: null,
   token: null,
   isAuthenticated: false,
-  isLoading: true, // Start as loading to check for existing session
+  isLoading: false, // Will be set to true during operations
 };
 
 const authSlice = createSlice({
@@ -30,18 +28,26 @@ const authSlice = createSlice({
       state.isAuthenticated = true;
       state.isLoading = false;
     },
+
     logout: (state) => {
       state.user = null;
       state.token = null;
       state.isAuthenticated = false;
       state.isLoading = false;
     },
+
     setLoading: (state, action: PayloadAction<boolean>) => {
       state.isLoading = action.payload;
     },
+
     updateUser: (state, action: PayloadAction<Partial<User>>) => {
       if (state.user) {
         state.user = { ...state.user, ...action.payload };
+        // Update localStorage as well
+        localStorage.setItem(
+          "coupon_management_user",
+          JSON.stringify(state.user)
+        );
       }
     },
   },

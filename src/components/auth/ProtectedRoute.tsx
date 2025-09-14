@@ -22,15 +22,9 @@ export function ProtectedRoute({
   const { isAuthenticated, isLoading, user, hasRole, logout } = useAuth();
   const router = useRouter();
 
-  // Debug logs
-  console.log("ProtectedRoute - isLoading:", isLoading);
-  console.log("ProtectedRoute - isAuthenticated:", isAuthenticated);
-  console.log("ProtectedRoute - user:", user);
-
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       // Not authenticated, redirect to login
-      console.log("Redirecting to login...");
       router.push("/login");
     }
   }, [isAuthenticated, isLoading, router]);
